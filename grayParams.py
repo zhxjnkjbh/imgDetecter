@@ -36,7 +36,18 @@ class GrayParams(QWidget):
 
 	def initData(self, shower):
 		self.shower = shower
-		self.data = shower.data
+		self.data = self.shower.data
+		self.img_show = self.data.img_show
+
+	def recover(self, process_index = 0):
+		if self.data.cur_index == self._index:
+			#还原
+			print('还原')
+			self.data.img_show = self.img_show.copy()
+		else:
+			print('切换')
+			self.data.cur_index = self._index
+			self.img_show = self.data.img_show.copy()
 
 	def changeSplitePhoto(self):
 		self.is_rgb = True
@@ -52,30 +63,30 @@ class GrayParams(QWidget):
 			self.qbt1.setText('切换为原始图像')
 
 	def changeImg(self, cur_index = 1):
-		img = self.data.img_rgb
+		self.recover(0)
+		self._index = 0
+		img = self.data.img_show
 		img_r, img_g, img_b = cv2.split(img)
-		print(img)
+		# print(img)
 		if 0 == cur_index:
 			img_b = np.where(img_b < img_g, img_b, img_g)
 			img_b = np.where(img_b < img_r, img_b, img_r)
 			img_g = img_b.copy()
 			img_r = img_b.copy()
 			self.data.img_show = cv2.merge([img_b, img_g, img_r])
-			pass
 		elif 1 == cur_index:
 			img_b = np.where(img_b > img_g, img_b, img_g)
 			img_b = np.where(img_b > img_r, img_b, img_r)
 			img_g = img_b.copy()
 			img_r = img_b.copy()
 			self.data.img_show = cv2.merge([img_b, img_g, img_r])
-			pass
 		else:
 			img_b = ((img_b + img_r + img_g) / 3).astype(int)
 			img_g = img_b.copy()
 			img_r = img_b.copy()
 			self.data.img_show = cv2.merge([img_b, img_g, img_r])
-			pass
 
+		# print((cur_index,self.cur_index))
 		self.cur_index = (self.cur_index + 1) % 2
 		self.shower.showProcessedImg()
 

@@ -33,8 +33,8 @@ class PhotoData:
 			self.raw_height = self.img_raw.shape[0]
 			self.img_raw = cv2.resize(self.img_raw, (1024, 768))
 			self.img_raw = cv2.cvtColor(self.img_raw, cv2.COLOR_BGR2RGB)
-			self.img_rgb = self.img_raw
-			self.img_show = self.img_rgb
+			self.img_rgb = self.img_raw.copy()
+			self.img_show = self.img_rgb.copy()
 			self.toGray()
 			self.img_b = self.img_raw[:, :, 0]
 			self.img_g = self.img_raw[:, :, 1]

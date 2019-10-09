@@ -7,6 +7,7 @@
 # WARNING! All changes made in this file will be lost!
 
 import sys
+import os
 import fix_qt_import_error
 from PyQt5.QtWidgets import QApplication
 
@@ -22,6 +23,7 @@ from thresh import Thresh
 from filter import Filter
 from beautify import Beautify
 from saver import Saver
+from outMsg import OutMsg
 import cv2
 
 class Ui_Form(QWidget):
@@ -35,9 +37,9 @@ class Ui_Form(QWidget):
         self.img = '003.jpg'
         self.path = './'
         self.photo_shower = PhotoShower()
-        self.photo_shower.data.read(self.img)
-        self.photo_shower.show(0)
-        self.photo_shower.resize(1024, 768)
+        # self.photo_shower.data.read(self.img)
+        # self.photo_shower.show(0)
+        # self.photo_shower.resize(1024, 768)
 
         self.tab_splite = GrayParams(self.photo_shower)#QtWidgets.QWidget()
         self.tab_splite.setObjectName("tab_splite")
@@ -59,16 +61,17 @@ class Ui_Form(QWidget):
         self.tab_filter.setObjectName('filter')
         self.tabWidget.addTab(self.tab_filter, '过滤')
         self.photo_shower.cur_index = 3
-        self.tabWidget.setCurrentIndex(3)
+        #self.tabWidget.setCurrentIndex(3)
 
         self.tab_beautify = Beautify(self.photo_shower)
         self.tab_beautify.setObjectName('beautify')
         self.tabWidget.addTab(self.tab_beautify, '美化')
+        #self.tabWidget.setCurrentIndex(4)
 
         self.tab_saver = Saver(self.photo_shower)
         self.tab_saver.setObjectName('saver')
         self.tabWidget.addTab(self.tab_saver, '保存')
-        #self.tabWidget.setCurrentIndex(5)
+        self.tabWidget.setCurrentIndex(4)
 
         self.horizontalLayoutWidget = QtWidgets.QWidget(self)
         self.horizontalLayoutWidget.setGeometry(QtCore.QRect(20, 160, 1151, 811))
@@ -84,11 +87,12 @@ class Ui_Form(QWidget):
         self.is_gray = False
 
         self.vlayout_widget = QtWidgets.QWidget(self)
-        self.vlayout_widget.setGeometry(QtCore.QRect(1200, 0, 351, 811))
+        self.vlayout_widget.setGeometry(QtCore.QRect(1100, 0, 351, 900))
         self.vlayout_widget.setObjectName("verticalLayoutWidget")
         # self.vlayout.addStretch(0)
 
         self.groupBox = QtWidgets.QGroupBox(self.vlayout_widget)
+        self.groupBox.resize(420, 720)
         self.groupBox.setTitle("123")
         self.groupBox.setObjectName("groupBox")
 
@@ -101,17 +105,17 @@ class Ui_Form(QWidget):
 
         self.qbt1 = QtWidgets.QPushButton(self.groupBox)
         self.qbt1.setGeometry(QtCore.QRect(10, 60, 150, 30))
-        self.qbt1.setText('图像切换')
-        self.qbt1.clicked.connect(self.changeRGBGray)
+        self.qbt1.setText('批量处理')
+        self.qbt1.clicked.connect(self.processImgsTogether)
 
         self.qbt2 = QtWidgets.QPushButton(self.groupBox)
-        self.qbt2.setGeometry(QtCore.QRect(200, 20, 150, 30))
+        self.qbt2.setGeometry(QtCore.QRect(190, 20, 150, 30))
         self.qbt2.setText('转换图像')
         self.is_process = True
         self.qbt2.clicked.connect(self.restore)
 
         self.qbt3 = QtWidgets.QPushButton(self.groupBox)
-        self.qbt3.setGeometry(QtCore.QRect(200, 60, 150, 30))
+        self.qbt3.setGeometry(QtCore.QRect(190, 60, 150, 30))
         self.qbt3.setText('保存')
         self.qbt3.clicked.connect(self.saveImg)
 
@@ -149,13 +153,23 @@ class Ui_Form(QWidget):
         self.text.setText(str(self.slider.value()))
         self.text.textChanged.connect(self.kChange)
 
+        #输出
+        self.edit_msg = QtWidgets.QTextEdit(self.groupBox)
+        self.edit_msg.resize(330, 420)
+        self.edit_msg.move(10, 170)
+        self.msg = OutMsg(self.edit_msg)
+        self.qbt5 = QPushButton('清理', self.groupBox)
+        self.qbt5.setGeometry(QtCore.QRect(280, 595, 60, 20))
+        self.qbt5.clicked.connect(self.msg.clear)
+        self.tab_filter.addOuter(self.msg)
+
         self.vlayout = QtWidgets.QVBoxLayout(self.vlayout_widget)#groupBox)
         self.vlayout.setContentsMargins(0, 200, 0, 10)  # 左，顶，右，底边距
 
         #self.vlayout.addWidget(self.qbt0)
         #self.vlayout.addWidget(self.qbt1)
         self.groupBox.setFixedWidth(350)
-        self.groupBox.setFixedHeight(800)
+        self.groupBox.setFixedHeight(620)
         self.vlayout.addWidget(self.groupBox)
 
         #self.vlayout.addWidget(self.groupBox)
@@ -191,14 +205,40 @@ class Ui_Form(QWidget):
             self.photo_shower.show(0)
             self.qbt0.setText('彩色图像-->灰度图像')
 
-    def changeRGBGray(self):
-        color_list = ['灰', '红', '绿', '蓝']
-        self.img_index = (self.img_index + 1) % 4
-        if 0 == self.img_index:
-            self.photo_shower.show(4)
-        else:
-            self.photo_shower.show(self.img_index)
-        self.qbt1.setText('图像切换:' + color_list[self.img_index] + '-->' + color_list[(self.img_index + 1) % 4])
+    def processImgsTogether(self):
+        if not os.path.exists('image.txt'):
+            print("找不到待处理图片文件！")
+        f = open('image.txt','r')
+        for line in f.readlines():
+            img_name = line.replace('\n','')
+            if self.photo_shower.data.read(img_name):
+                self.tab_open_close.initData(self.photo_shower)
+                self.tab_thresh.initData(self.photo_shower)
+                self.tab_filter.initData(self.photo_shower)
+                self.processImg()
+                pos = img_name.rfind('.')
+                img_color_name = img_name[:pos] + '_color.jpg'
+                img_black_name = img_name[:pos] + '_black.jpg'
+                print(img_color_name,'\n', img_black_name)
+                width = self.photo_shower.data.raw_width
+                height = self.photo_shower.data.raw_height
+                img_color = cv2.resize(self.photo_shower.data.img_show, (width, height))
+                img_color = cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB)
+                cv2.imwrite(img_color_name, img_color)
+                img_black = cv2.resize(self.photo_shower.data.img_binary, (width, height))
+                cv2.imwrite(img_black_name, img_black)
+                print('读取成功!')
+            else:
+                print('读取失败!')
+
+        #self.processImg()
+        # color_list = ['灰', '红', '绿', '蓝']
+        # self.img_index = (self.img_index + 1) % 4
+        # if 0 == self.img_index:
+        #     self.photo_shower.show(4)
+        # else:
+        #     self.photo_shower.show(self.img_index)
+        # self.qbt1.setText('图像切换:' + color_list[self.img_index] + '-->' + color_list[(self.img_index + 1) % 4])
 
     def restore(self):
         if self.is_process:
@@ -225,8 +265,10 @@ class Ui_Form(QWidget):
         if self.photo_shower.data.read(self.img):
             self.photo_shower.show(0)
             self.text_img.setText(self.img)
+            self.tab_splite.initData(self.photo_shower)
             self.tab_open_close.initData(self.photo_shower)
             self.tab_thresh.initData(self.photo_shower)
+            self.tab_filter.initData(self.photo_shower)
             pos = self.img.rfind('/')
             if pos > 0:
                 self.path = self.img[:pos]
@@ -245,8 +287,8 @@ class Ui_Form(QWidget):
         if pos > 0:
             img_type = img_name[pos:len(img_name)]
             img_type = '.jpg'
-            #img_name = img_name[:pos] + '_after' + img_type
-            img_name = img_name[:pos] + img_type
+            img_name = img_name[:pos] + '_after' + img_type
+            #img_name = img_name[:pos] + img_type
             print(data.raw_width, data.raw_height)
             img = cv2.resize(data.img_show, (data.raw_width, data.raw_height))
             cv2.imwrite(img_name, img)
@@ -257,7 +299,7 @@ class Ui_Form(QWidget):
         self.tab_thresh.processImgByThresh()
         self.tab_filter.filterSize()
         self.tab_filter.fufillImg()
-
+        self.tab_filter.rectangulazie()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
